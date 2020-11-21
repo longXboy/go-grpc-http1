@@ -24,8 +24,8 @@ import (
 	"net/textproto"
 	"strings"
 
+	"github.com/longXboy/go-grpc-http1/internal/ioutils"
 	"github.com/pkg/errors"
-	"golang.stackrox.io/grpc-http1/internal/ioutils"
 )
 
 type errExtraData int64

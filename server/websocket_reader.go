@@ -19,8 +19,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/longXboy/go-grpc-http1/internal/grpcproto"
 	"github.com/pkg/errors"
-	"golang.stackrox.io/grpc-http1/internal/grpcproto"
 	"nhooyr.io/websocket"
 )
 

@@ -19,7 +19,7 @@ import (
 	"errors"
 	"net"
 
-	"golang.stackrox.io/grpc-http1/internal/concurrency"
+	"github.com/longXboy/go-grpc-http1/internal/concurrency"
 )
 
 const (

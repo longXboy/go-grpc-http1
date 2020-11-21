@@ -28,12 +28,12 @@ import (
 	"sync/atomic"
 
 	"github.com/golang/glog"
+	"github.com/longXboy/go-grpc-http1/internal/grpcproto"
+	"github.com/longXboy/go-grpc-http1/internal/grpcwebsocket"
+	"github.com/longXboy/go-grpc-http1/internal/httputils"
+	"github.com/longXboy/go-grpc-http1/internal/pipeconn"
+	"github.com/longXboy/go-grpc-http1/internal/size"
 	"github.com/pkg/errors"
-	"golang.stackrox.io/grpc-http1/internal/grpcproto"
-	"golang.stackrox.io/grpc-http1/internal/grpcwebsocket"
-	"golang.stackrox.io/grpc-http1/internal/httputils"
-	"golang.stackrox.io/grpc-http1/internal/pipeconn"
-	"golang.stackrox.io/grpc-http1/internal/size"
 	"google.golang.org/grpc/codes"
 	"nhooyr.io/websocket"
 )
