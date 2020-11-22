@@ -127,12 +127,6 @@ func handleGRPCWeb(w http.ResponseWriter, req *http.Request, validPaths map[stri
 		return
 	}
 
-	if !acceptGRPCWeb {
-		// Client doesn't support trailers and doesn't accept a response downgraded to gRPC web.
-		http.Error(w, "Client neither supports trailers nor gRPC web responses", http.StatusInternalServerError)
-		return
-	}
-
 	if !isDowngradableMethod {
 		http.Error(w, "Client requires a gRPC-Web response to a method that cannot be downgraded", http.StatusBadRequest)
 		return
