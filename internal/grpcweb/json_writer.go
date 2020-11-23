@@ -17,9 +17,9 @@ package grpcweb
 import (
 	"bytes"
 	"net/http"
+	"strconv"
 
 	"github.com/longXboy/go-grpc-http1/internal/sliceutils"
-	"github.com/longXboy/go-grpc-http1/internal/stringutils"
 
 	"google.golang.org/grpc/codes"
 )
@@ -28,6 +28,7 @@ type jsonWriter struct {
 	w http.ResponseWriter
 
 	statusCode int
+	header     []byte
 	body       *bytes.Buffer
 	// List of trailers that were announced via the `Trailer` header at the time headers were written. Also used to keep
 	// track of whether headers were already written (in which case this is non-nil, even if it is the empty slice).
@@ -68,17 +69,10 @@ func (w *jsonWriter) prepareHeadersIfNecessary() {
 	// Trailers are sent in a data frame, so don't announce trailers as otherwise downstream proxies might get confused.
 	hdr.Del("Trailer")
 
-	// "Downgrade" response content type to grpc-web.
-	contentType, contentSubtype := stringutils.Split2(hdr.Get("Content-Type"), "+")
+	hdr.Set("Content-Type", "application/json")
 
-	respContentType := "application/grpc-web"
-	if contentType == "application/grpc" && contentSubtype != "" {
-		respContentType += "+" + contentSubtype
-	}
-
-	hdr.Set("Content-Type", respContentType)
 	// Any content length that might be set is no longer accurate because of trailers.
-	hdr.Del("Content-Length")
+	//hdr.Del("Content-Length")
 }
 
 // WriteHeader sends HTTP headers to the client, along with the given status code.
@@ -90,12 +84,14 @@ func (w *jsonWriter) WriteHeader(statusCode int) {
 // Write writes a chunk of data.
 func (w *jsonWriter) Write(buf []byte) (int, error) {
 	w.prepareHeadersIfNecessary()
+
 	return w.body.Write(buf)
 }
 
 // Finalize sends trailer data in a data frame. It *needs* to be called
 func (w *jsonWriter) Finalize() error {
 	w.prepareHeadersIfNecessary()
+	w.w.Header().Set("Content-Length", strconv.FormatInt(int64(w.body.Len()-5), 10))
 	hdr := w.Header()
 	if w.statusCode != 0 {
 		w.w.WriteHeader(w.statusCode)
@@ -104,7 +100,7 @@ func (w *jsonWriter) Finalize() error {
 		code.UnmarshalJSON([]byte(hdr.Get("Grpc-Status")))
 		w.w.WriteHeader(fromGrpcToStatus(code))
 	}
-	_, err := w.w.Write(w.body.Bytes())
+	_, err := w.w.Write(w.body.Bytes()[5:])
 	if err != nil {
 		return err
 	}

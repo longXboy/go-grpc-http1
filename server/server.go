@@ -27,7 +27,6 @@ import (
 	"github.com/longXboy/go-grpc-http1/internal/grpcwebsocket"
 	"github.com/longXboy/go-grpc-http1/internal/size"
 	"github.com/longXboy/go-grpc-http1/internal/sliceutils"
-	"github.com/longXboy/go-grpc-http1/internal/stringutils"
 	"google.golang.org/grpc"
 	"nhooyr.io/websocket"
 )
@@ -131,13 +130,28 @@ func handleGRPCWeb(w http.ResponseWriter, req *http.Request, validPaths map[stri
 		http.Error(w, "Client requires a gRPC-Web response to a method that cannot be downgraded", http.StatusBadRequest)
 		return
 	}
+	var transcodingWriter http.ResponseWriter
+	var finalize func() error
+	if !acceptGRPCWeb {
+		// Client doesn't support trailers and doesn't accept a response downgraded to gRPC web.
+		req.Header.Set("Content-Type", "application/grpc+json")
+		req.Header.Set("Accept", "application/grpc+json")
+		transcodingWriter, finalize = grpcweb.NewJsonWriter(w)
+		var err error
+		req.Body, err = grpcweb.NewJsonReader(req.Body)
+		if err != nil {
+			http.Error(w, "Client body content is invlaid!", http.StatusBadRequest)
+			return
+		}
+	} else {
+		transcodingWriter, finalize = grpcweb.NewResponseWriter(w)
+	}
 
 	// Tell the server we would accept trailers (the gRPC server currently (v1.29.1) doesn't check for this but it
 	// really should, as the purpose of the TE header according to the gRPC spec is to detect incompatible proxies).
 	req.Header.Set("TE", "trailers")
 
 	// Downgrade response to gRPC web.
-	transcodingWriter, finalize := grpcweb.NewResponseWriter(w)
 	grpcSrv.ServeHTTP(transcodingWriter, req)
 	if err := finalize(); err != nil {
 		glog.Errorf("Error sending trailers in downgraded gRPC web response: %v", err)
@@ -176,11 +190,11 @@ func CreateDowngradingHandler(grpcSrv *grpc.Server, httpHandler http.Handler, op
 			return
 		}
 
-		if contentType, _ := stringutils.Split2(req.Header.Get("Content-Type"), "+"); contentType != "application/grpc" {
+		/*if contentType, _ := stringutils.Split2(req.Header.Get("Content-Type"), "+"); contentType != "application/grpc" {
 			// Non-gRPC request to the same port.
 			httpHandler.ServeHTTP(w, req)
 			return
-		}
+		}*/
 
 		handleGRPCWeb(w, req, validGRPCWebPaths, grpcSrv, &serverOpts)
 	})
