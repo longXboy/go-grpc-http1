@@ -96,13 +96,15 @@ func (w *jsonWriter) Finalize() error {
 	if w.statusCode != 0 {
 		w.w.WriteHeader(w.statusCode)
 	} else {
-		var code codes.Code
+		code := new(codes.Code)
 		code.UnmarshalJSON([]byte(hdr.Get("Grpc-Status")))
-		w.w.WriteHeader(fromGrpcToStatus(code))
+		w.w.WriteHeader(fromGrpcToStatus(*code))
 	}
-	_, err := w.w.Write(w.body.Bytes()[5:])
-	if err != nil {
-		return err
+	if w.body.Len() >= 5 {
+		_, err := w.w.Write(w.body.Bytes()[5:])
+		if err != nil {
+			return err
+		}
 	}
 	if flusher, _ := w.w.(http.Flusher); flusher != nil {
 		flusher.Flush()
@@ -135,6 +137,7 @@ func fromGrpcToStatus(code codes.Code) (statusCode int) {
 	case codes.FailedPrecondition:
 		statusCode = 428
 	case codes.Unknown:
+		statusCode = 500
 	default:
 		statusCode = 500
 	}
