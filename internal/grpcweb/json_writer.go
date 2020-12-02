@@ -91,7 +91,13 @@ func (w *jsonWriter) Write(buf []byte) (int, error) {
 // Finalize sends trailer data in a data frame. It *needs* to be called
 func (w *jsonWriter) Finalize() error {
 	w.prepareHeadersIfNecessary()
-	w.w.Header().Set("Content-Length", strconv.FormatInt(int64(w.body.Len()-5), 10))
+	var body []byte
+	if w.body.Len() >= 5 {
+		body = w.body.Bytes()[5:]
+	} else {
+		body = w.body.Bytes()
+	}
+	w.w.Header().Set("Content-Length", strconv.FormatInt(int64(len(body)), 10))
 	hdr := w.Header()
 	if w.statusCode != 0 {
 		w.w.WriteHeader(w.statusCode)
@@ -100,11 +106,9 @@ func (w *jsonWriter) Finalize() error {
 		code.UnmarshalJSON([]byte(hdr.Get("Grpc-Status")))
 		w.w.WriteHeader(fromGrpcToStatus(*code))
 	}
-	if w.body.Len() >= 5 {
-		_, err := w.w.Write(w.body.Bytes()[5:])
-		if err != nil {
-			return err
-		}
+	_, err := w.w.Write(body)
+	if err != nil {
+		return err
 	}
 	if flusher, _ := w.w.(http.Flusher); flusher != nil {
 		flusher.Flush()
